@@ -1,0 +1,110 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f7fb;
+  margin: 0;
+  color: #1f2937;
+}
+
+.navbar {
+  background: #0b2347;
+  color: white;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navbar a {
+  color: white;
+  margin-left: 16px;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.container {
+  width: 92%;
+  max-width: 1050px;
+  margin: 30px auto;
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+h1, h2, h3 {
+  color: #0b2347;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+
+button {
+  background: #0b2347;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:hover {
+  background: #123b75;
+}
+
+.secondary-btn {
+  background: #374151;
+}
+
+.danger-btn {
+  background: #b91c1c;
+}
+
+.card {
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+  margin-top: 12px;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.badge {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #111827;
+  font-size: 12px;
+  margin: 2px;
+}
+
+.message {
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.success {
+  color: #047857;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+.small-note {
+  color: #6b7280;
+  font-size: 14px;
+}

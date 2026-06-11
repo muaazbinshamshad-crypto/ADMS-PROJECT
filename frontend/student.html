@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="navbar">
+    <strong>CareerSync - Student</strong>
+    <div>
+      <a href="student.html">Dashboard</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <h1>Student Dashboard</h1>
+    <p class="small-note">Create profile, browse companies, apply, and track application status.</p>
+
+    <div class="grid">
+      <div>
+        <h2>Create / Update Profile</h2>
+        <input type="text" id="department" placeholder="Department e.g. Computer Science">
+        <input type="number" id="cgpa" step="0.01" placeholder="CGPA e.g. 3.4">
+        <input type="text" id="skills" placeholder="Skills comma separated e.g. Node.js, MongoDB">
+        <input type="text" id="resumeLink" placeholder="Resume Link">
+        <button onclick="createProfile()">Create Profile</button>
+        <button class="secondary-btn" onclick="updateProfile()">Update Profile</button>
+        <p id="profileMessage" class="message"></p>
+      </div>
+
+      <div>
+        <h2>My Profile</h2>
+        <button onclick="loadProfile()">Load Profile</button>
+        <div id="profile"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>Available Companies</h2>
+    <button onclick="loadCompanies()">Load Companies</button>
+    <div id="companies"></div>
+  </div>
+
+  <div class="container">
+    <h2>My Applications</h2>
+    <button onclick="loadMyApplications()">Load My Applications</button>
+    <div id="applications"></div>
+  </div>
+
+<script>
+const token = localStorage.getItem("token");
+if (!token) window.location.href = "login.html";
+
+function logout() {
+  localStorage.clear();
+  window.location.href = "login.html";
+}
+
+function authHeaders() {
+  return {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token
+  };
+}
+
+function getProfileBody() {
+  return {
+    department: document.getElementById("department").value.trim(),
+    cgpa: Number(document.getElementById("cgpa").value),
+    skills: document.getElementById("skills").value.split(",").map(s => s.trim()).filter(Boolean),
+    resumeLink: document.getElementById("resumeLink").value.trim()
+  };
+}
+
+async function createProfile() {
+  const msg = document.getElementById("profileMessage");
+  try {
+    const response = await fetch("http://localhost:5000/api/students/profile", {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(getProfileBody())
+    });
+
+    const data = await response.json();
+    msg.innerText = data.message;
+    msg.className = response.ok ? "message success" : "message error";
+    if (response.ok) loadProfile();
+  } catch (error) {
+    msg.innerText = "Backend not running.";
+    msg.className = "message error";
+  }
+}
+
+async function updateProfile() {
+  const msg = document.getElementById("profileMessage");
+  try {
+    const response = await fetch("http://localhost:5000/api/students/profile", {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify(getProfileBody())
+    });
+
+    const data = await response.json();
+    msg.innerText = data.message;
+    msg.className = response.ok ? "message success" : "message error";
+    if (response.ok) loadProfile();
+  } catch (error) {
+    msg.innerText = "Backend not running.";
+    msg.className = "message error";
+  }
+}
+
+async function loadProfile() {
+  const container = document.getElementById("profile");
+  try {
+    const response = await fetch("http://localhost:5000/api/students/profile", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      container.innerHTML = `<p class="error">${data.message}</p>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="card">
+        <h3>${data.userId.name}</h3>
+        <p><b>Email:</b> ${data.userId.email}</p>
+        <p><b>Department:</b> ${data.department}</p>
+        <p><b>CGPA:</b> ${data.cgpa}</p>
+        <p><b>Skills:</b> ${data.skills.map(s => `<span class="badge">${s}</span>`).join(" ")}</p>
+        <p><b>Resume:</b> ${data.resumeLink || "Not added"}</p>
+      </div>
+    `;
+  } catch (error) {
+    container.innerHTML = `<p class="error">Backend not running.</p>`;
+  }
+}
+
+async function loadCompanies() {
+  const container = document.getElementById("companies");
+  container.innerHTML = "Loading...";
+
+  try {
+    const response = await fetch("http://localhost:5000/api/companies", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+
+    const companies = await response.json();
+    container.innerHTML = "";
+
+    if (!Array.isArray(companies) || companies.length === 0) {
+      container.innerHTML = "<p>No companies found.</p>";
+      return;
+    }
+
+    companies.forEach(company => {
+      container.innerHTML += `
+        <div class="card">
+          <h3>${company.name}</h3>
+          <p><b>Sector:</b> ${company.sector}</p>
+          <p><b>Position:</b> ${company.position}</p>
+          <p><b>Requirements:</b> ${company.requirements.map(r => `<span class="badge">${r}</span>`).join(" ")}</p>
+          <p><b>Deadline:</b> ${company.deadline}</p>
+          <button onclick="apply('${company._id}')">Apply</button>
+        </div>
+      `;
+    });
+  } catch (error) {
+    container.innerHTML = `<p class="error">Backend not running.</p>`;
+  }
+}
+
+async function apply(companyId) {
+  try {
+    const response = await fetch("http://localhost:5000/api/applications/apply", {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ companyId })
+    });
+
+    const data = await response.json();
+    alert(data.message);
+    loadMyApplications();
+  } catch (error) {
+    alert("Backend not running.");
+  }
+}
+
+async function loadMyApplications() {
+  const container = document.getElementById("applications");
+  container.innerHTML = "Loading...";
+
+  try {
+    const response = await fetch("http://localhost:5000/api/applications/my", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+
+    const applications = await response.json();
+    container.innerHTML = "";
+
+    if (!Array.isArray(applications) || applications.length === 0) {
+      container.innerHTML = "<p>No applications found.</p>";
+      return;
+    }
+
+    applications.forEach(app => {
+      container.innerHTML += `
+        <div class="card">
+          <h3>${app.companyId.name}</h3>
+          <p><b>Sector:</b> ${app.companyId.sector}</p>
+          <p><b>Position:</b> ${app.position}</p>
+          <p><b>Status:</b> <span class="badge">${app.status}</span></p>
+        </div>
+      `;
+    });
+  } catch (error) {
+    container.innerHTML = `<p class="error">Backend not running.</p>`;
+  }
+}
+</script>
+</body>
+</html>

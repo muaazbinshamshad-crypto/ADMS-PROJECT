@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CareerSync Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="navbar">
+    <strong>CareerSync</strong>
+    <div>
+      <a href="login.html">Login</a>
+      <a href="register.html">Register</a>
+    </div>
+  </div>
+
+  <div class="container" style="max-width: 500px;">
+    <h1>Login</h1>
+    <p class="small-note">Demo accounts after running seed: admin@gmail.com / 123456, student@gmail.com / 123456</p>
+
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+
+    <p id="message" class="message"></p>
+  </div>
+
+<script>
+async function login() {
+  const message = document.getElementById("message");
+  message.innerText = "Logging in...";
+  message.className = "message";
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+
+  try {
+    const response = await fetch("http://localhost:5000/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.innerText = data.message || "Login failed";
+      message.className = "message error";
+      return;
+    }
+
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("role", data.user.role);
+    localStorage.setItem("name", data.user.name);
+
+    if (data.user.role === "admin") {
+      window.location.href = "admin.html";
+    } else {
+      window.location.href = "student.html";
+    }
+  } catch (error) {
+    message.innerText = "Backend not running. Start backend first.";
+    message.className = "message error";
+  }
+}
+</script>
+</body>
+</html>

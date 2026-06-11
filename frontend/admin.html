@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="navbar">
+    <strong>CareerSync - Admin</strong>
+    <div>
+      <a href="admin.html">Dashboard</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <h1>Admin Dashboard</h1>
+    <p class="small-note">Add companies, view applications, update status, and show aggregation report.</p>
+
+    <div class="grid">
+      <div>
+        <h2>Add Company</h2>
+        <input type="text" id="name" placeholder="Company Name">
+        <input type="text" id="sector" placeholder="Sector">
+        <input type="text" id="position" placeholder="Position">
+        <input type="text" id="requirements" placeholder="Requirements comma separated">
+        <input type="text" id="deadline" placeholder="Deadline e.g. 2026-08-15">
+        <button onclick="addCompany()">Add Company</button>
+        <p id="companyMessage" class="message"></p>
+      </div>
+
+      <div>
+        <h2>Admin Demo Notes</h2>
+        <div class="card">
+          <p><b>CRUD:</b> Company create, read, update/delete endpoints exist.</p>
+          <p><b>Authentication:</b> JWT token protects admin routes.</p>
+          <p><b>Aggregation:</b> Aggregate report joins applications, students, users, and companies.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>All Applications</h2>
+    <button onclick="loadApplications()">Load Applications</button>
+    <div id="applications"></div>
+  </div>
+
+  <div class="container">
+    <h2>MongoDB Aggregation Report</h2>
+    <button onclick="loadAggregateReport()">Load Aggregation Report</button>
+    <div id="report"></div>
+  </div>
+
+<script>
+const token = localStorage.getItem("token");
+if (!token) window.location.href = "login.html";
+
+function logout() {
+  localStorage.clear();
+  window.location.href = "login.html";
+}
+
+function authHeaders() {
+  return {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token
+  };
+}
+
+async function addCompany() {
+  const msg = document.getElementById("companyMessage");
+
+  const body = {
+    name: document.getElementById("name").value.trim(),
+    sector: document.getElementById("sector").value.trim(),
+    position: document.getElementById("position").value.trim(),
+    requirements: document.getElementById("requirements").value.split(",").map(r => r.trim()).filter(Boolean),
+    deadline: document.getElementById("deadline").value.trim()
+  };
+
+  try {
+    const response = await fetch("http://localhost:5000/api/companies", {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(body)
+    });
+
+    const data = await response.json();
+    msg.innerText = data.message;
+    msg.className = response.ok ? "message success" : "message error";
+  } catch (error) {
+    msg.innerText = "Backend not running.";
+    msg.className = "message error";
+  }
+}
+
+async function loadApplications() {
+  const container = document.getElementById("applications");
+  container.innerHTML = "Loading...";
+
+  try {
+    const response = await fetch("http://localhost:5000/api/applications/all", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+
+    const applications = await response.json();
+    container.innerHTML = "";
+
+    if (!Array.isArray(applications) || applications.length === 0) {
+      container.innerHTML = "<p>No applications found.</p>";
+      return;
+    }
+
+    applications.forEach(app => {
+      const studentName = app.studentId && app.studentId.userId ? app.studentId.userId.name : "Unknown student";
+      const studentEmail = app.studentId && app.studentId.userId ? app.studentId.userId.email : "Unknown email";
+      const department = app.studentId ? app.studentId.department : "N/A";
+      const companyName = app.companyId ? app.companyId.name : "Unknown company";
+
+      container.innerHTML += `
+        <div class="card">
+          <h3>${studentName}</h3>
+          <p><b>Email:</b> ${studentEmail}</p>
+          <p><b>Department:</b> ${department}</p>
+          <p><b>Company:</b> ${companyName}</p>
+          <p><b>Position:</b> ${app.position}</p>
+          <p><b>Status:</b> <span class="badge">${app.status}</span></p>
+
+          <select id="status-${app._id}">
+            <option value="Pending">Pending</option>
+            <option value="Shortlisted">Shortlisted</option>
+            <option value="Accepted">Accepted</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+
+          <button onclick="updateStatus('${app._id}')">Update Status</button>
+        </div>
+      `;
+    });
+  } catch (error) {
+    container.innerHTML = `<p class="error">Backend not running.</p>`;
+  }
+}
+
+async function updateStatus(applicationId) {
+  const status = document.getElementById("status-" + applicationId).value;
+
+  try {
+    const response = await fetch(`http://localhost:5000/api/applications/${applicationId}/status`, {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify({ status })
+    });
+
+    const data = await response.json();
+    alert(data.message);
+    loadApplications();
+  } catch (error) {
+    alert("Backend not running.");
+  }
+}
+
+async function loadAggregateReport() {
+  const container = document.getElementById("report");
+  container.innerHTML = "Loading...";
+
+  try {
+    const response = await fetch("http://localhost:5000/api/applications/aggregate-report", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+
+    const report = await response.json();
+    container.innerHTML = "";
+
+    if (!Array.isArray(report) || report.length === 0) {
+      container.innerHTML = "<p>No report data found.</p>";
+      return;
+    }
+
+    report.forEach(item => {
+      container.innerHTML += `
+        <div class="card">
+          <h3>${item.studentName} → ${item.companyName}</h3>
+          <p><b>Email:</b> ${item.studentEmail}</p>
+          <p><b>Department:</b> ${item.department}</p>
+          <p><b>CGPA:</b> ${item.cgpa}</p>
+          <p><b>Position:</b> ${item.position}</p>
+          <p><b>Status:</b> <span class="badge">${item.status}</span></p>
+          <p><b>Skills:</b> ${item.skills.map(s => `<span class="badge">${s}</span>`).join(" ")}</p>
+        </div>
+      `;
+    });
+  } catch (error) {
+    container.innerHTML = `<p class="error">Backend not running.</p>`;
+  }
+}
+</script>
+</body>
+</html>
